@@ -1,0 +1,62 @@
+services:
+  postgres:
+    container_name: cr45-postgres
+    image: postgres:15-alpine
+    env_file:
+      - ./.env.postgres
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  service-identity:
+    container_name: cr45-service-identity
+    build:
+      context: ../service-identity
+      dockerfile: Dockerfile
+    env_file:
+      - ./.env.service-identity
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  service-timetable:
+    container_name: cr45-service-timetable
+    build:
+      context: ../service-timetable
+      dockerfile: Dockerfile
+    env_file:
+      - ./.env.service-timetable
+    depends_on:
+      postgres:
+        condition: service_healthy
+      service-identity:
+        condition: service_started
+
+  gateway:
+    container_name: cr45-gateway
+    image: caddy:2-alpine
+    ports:
+      - "8080:80"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+    depends_on:
+      - service-identity
+      - service-timetable
+
+  adapter-matrix:
+    container_name: cr45-adapter-matrix
+    build:
+      context: ../adapter-matrix
+      dockerfile: Dockerfile
+    env_file:
+      - ./.env.adapter-matrix
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  postgres_data:

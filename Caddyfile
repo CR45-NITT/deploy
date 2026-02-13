@@ -1,0 +1,36 @@
+{
+	# Internal gateway only. TLS is terminated at the external master proxy.
+	auto_https off
+	admin off
+}
+
+:80 {
+	encode zstd gzip
+
+	log {
+		output stdout
+		format console
+	}
+
+	@identityRoot path /identity
+	redir @identityRoot /identity/ 308
+
+	@timetableRoot path /timetable
+	redir @timetableRoot /timetable/ 308
+
+	handle_path /identity/* {
+		reverse_proxy service-identity:8080
+	}
+
+	handle_path /timetable/* {
+		reverse_proxy service-timetable:8080
+	}
+
+	handle /healthz {
+		respond "ok" 200
+	}
+
+	handle {
+		respond "not found" 404
+	}
+}
