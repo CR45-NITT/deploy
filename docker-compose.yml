@@ -47,6 +47,16 @@ services:
       - service-identity
       - service-timetable
 
+  frontend-web:
+    container_name: cr45-frontend-web
+    build:
+      context: ../frontend-web
+      dockerfile: Dockerfile
+    ports:
+      - "3000:80"
+    depends_on:
+      - gateway
+
   adapter-matrix:
     container_name: cr45-adapter-matrix
     build:
